@@ -6,7 +6,8 @@ library(modelsummary)
 
 # Read Data ---------------------------------------------------------------
 
-data <- range_read(ss = "https://docs.google.com/spreadsheets/d/10yWn6S78KfhaMq22Nc-TIzA_IiekYzEfGmTi-JkhHhE/edit?gid=0#gid=0") |> 
+data <- range_read(ss = "https://docs.google.com/spreadsheets/d/10yWn6S78KfhaMq22Nc-TIzA_IiekYzEfGmTi-JkhHhE/edit?gid=0#gid=0") |>
+  select(!TIME_TEST) |> 
   na.omit() |> 
   mutate(REACTION_TIME = as.numeric(REACTION_TIME)) |> 
   mutate(HEART_RATE_MANUAL = as.numeric(HEART_RATE_MANUAL)) |> 
@@ -16,18 +17,15 @@ data <- range_read(ss = "https://docs.google.com/spreadsheets/d/10yWn6S78KfhaMq2
   mutate(SEQUENCE_MEMORY = as.numeric(SEQUENCE_MEMORY)) |> 
   mutate(AIM_TRAINER = as.numeric(AIM_TRAINER)) |> 
   mutate(TREATMENT = fct_relevel(as.factor(TREATMENT), "Placebo")) |>  
-  mutate(correct_guess = if_else(SUBJ_GUESS == TREATMENT, 1, 0))
+  mutate(correct_guess = if_else(SUBJ_GUESS == TREATMENT, 1, 0)) |> 
+  mutate(Data = lubridate::ymd(DATE))
 
 
 # Regression --------------------------------------------------------------
 
 # Reaction Time
-model_1 <- fixest::feols(REACTION_TIME ~ TREATMENT | PARTICIPANT_ID, data = data) 
+model_1 <- fixest::feols(REACTION_TIME ~ TREATMENT | PARTICIPANT_ID + DESKTOP, data = data) 
 modelsummary::modelplot(model_1) 
-
-# Correct Guess
-model_2 <- fixest::feglm(correct_guess ~ TREATMENT | PARTICIPANT_ID, data = data) 
-modelsummary::modelplot(model_2) 
 
 # Correct Guess
 model_2 <- fixest::feglm(correct_guess ~ TREATMENT | PARTICIPANT_ID, data = data) 
@@ -59,4 +57,12 @@ modelsummary::modelplot(model_8)
 
 # Display -----------------------------------------------------------------
 
+ggplot(data, aes(x = DATE, y = REACTION_TIME, color = PARTICIPANT_ID, group =PARTICIPANT_ID)) +
+  geom_point(aes(shape = DESKTOP)) +
+  geom_smooth(data = data[data$DESKTOP == "desktop",], se = FALSE, method = "lm") +
+  theme_classic()
 
+
+ggplot(data, aes(x = DATE, y = HEART_RATE_MANUAL, color = PARTICIPANT_ID, group =PARTICIPANT_ID)) +
+  geom_point(aes(shape = TREATMENT)) +
+  theme_classic()
